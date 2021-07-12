@@ -33,6 +33,8 @@ if _TEXT_AVAILABLE:
 else:
     AggregateScore, Score, BootstrapAggregator = None, None, object
 
+from sklearn.metrics import f1_score
+
 
 def _count_ngram(ngram_input_list: List[str], n_gram: int) -> Counter:
     """
@@ -238,3 +240,55 @@ def format_rouge_results(result: Dict[str, AggregateScore], decimal_places: int 
             score = round(getattr(mid, stat), decimal_places)
             flattened_result[f"{rouge_key}_{stat}"] = score
     return flattened_result
+
+class F1Metric(Metric):
+    """
+    The F1 score is the harmonic mean of the precision and recall. It can be computed with:
+    F1 = 2 * (precision * recall) / (precision + recall)
+
+    Args:
+    predictions: Predicted labels, as returned by a model.
+    references: Ground truth labels.
+    labels: The set of labels to include when average != 'binary', and
+        their order if average is None. Labels present in the data can
+        be excluded, for example to calculate a multiclass average ignoring
+        a majority negative class, while labels not present in the data will
+        result in 0 components in a macro average. For multilabel targets,
+        labels are column indices. By default, all labels in y_true and
+        y_pred are used in sorted order.
+    average: This parameter is required for multiclass/multilabel targets.
+        If None, the scores for each class are returned. Otherwise, this
+        determines the type of averaging performed on the data:
+            binary: Only report results for the class specified by pos_label.
+                This is applicable only if targets (y_{true,pred}) are binary.
+            micro: Calculate metrics globally by counting the total true positives,
+                false negatives and false positives.
+            macro: Calculate metrics for each label, and find their unweighted mean.
+                This does not take label imbalance into account.
+            weighted: Calculate metrics for each label, and find their average
+                weighted by support (the number of true instances for each label).
+                This alters ‘macro’ to account for label imbalance; it can result
+                in an F-score that is not between precision and recall.
+            samples: Calculate metrics for each instance, and find their average
+                (only meaningful for multilabel classification).
+    sample_weight: Sample weights.
+    Returns:
+        f1: F1 score.
+    Examples:
+        >>> f1_metric = F1Metric()
+        >>> results = f1_metric.compute(references=[0, 1], predictions=[0, 1])
+        >>> print(results)
+        {'f1': 1.0}
+    """
+    def _compute(self, predictions, references, labels=None, pos_label=1, average="binary", sample_weight=None):
+        return {
+            "f1": f1_score(
+                references,
+                predictions,
+                labels=labels,
+                pos_label=pos_label,
+                average=average,
+                sample_weight=sample_weight,
+            ).item(),
+        }
+
